@@ -1,0 +1,365 @@
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local vector = getgenv().vector or Vector3 -- fallback in case `vector.create` is just an alias
+local PlantRemote = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("Plant_RE")
+local player = game.Players.LocalPlayer
+
+local Window = Fluent:CreateWindow({
+	Title = "SkillyBeta Hub " .. Fluent.Version,
+	SubTitle = "TESTING",
+	TabWidth = 160,
+	Size = UDim2.fromOffset(580, 460),
+	Acrylic = false,
+	Theme = "Darker",
+	MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+local Tab = Window:AddTab({ Title = "Planting", Icon = "apple" })
+
+local selectedSeed = "Carrot"
+local seedList = {
+	"Carrot",
+	"Strawberry",
+	"Blueberry",
+	"Corn",
+	"Tomato",
+	"Grape",
+    "Daffodil",
+    "Watermelon",
+    "Pumpkin",
+    "Coconut",
+    "Bamboo",
+    "Apple",
+    "Cactus",
+    "Orange Tulip",
+    "Dragon Fruit",
+    "Mushroom",
+    "Mango"
+}
+
+Tab:AddDropdown("SeedDropdown", {
+	Title = "Select Seed",
+	Values = seedList,
+	Default = selectedSeed,
+	Multi = false
+}):OnChanged(function(value)
+	selectedSeed = value
+end)
+
+Tab:AddButton({
+	Title = "Plant",
+	Callback = function()
+		local char = player.Character or player.CharacterAdded:Wait()
+		local root = char and char:FindFirstChild("HumanoidRootPart")
+
+		if root and selectedSeed then
+			local pos = root.Position - Vector3.new(0, 3, 0)
+			local args = {
+				vector.create(pos.X, pos.Y, pos.Z),
+				selectedSeed
+			}
+			PlantRemote:FireServer(unpack(args))
+		end
+	end
+})
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = game.Players.LocalPlayer
+local PlantRemote = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("Plant_RE")
+
+local autoPlantAllRunning = false
+
+Tab:AddToggle("AutoPlantAllToggle", {
+    Title = "Auto Plant All",
+    Default = false
+}):OnChanged(function(state)
+    autoPlantAllRunning = state
+
+    if autoPlantAllRunning then
+        task.spawn(function()
+            while autoPlantAllRunning do
+                local backpack = player:FindFirstChild("Backpack")
+                local character = player.Character or player.CharacterAdded:Wait()
+                local root = character and character:FindFirstChild("HumanoidRootPart")
+
+                if backpack and root then
+                    for _, tool in ipairs(backpack:GetChildren()) do
+                        if not autoPlantAllRunning then return end
+                        if tool:IsA("Tool") and tool.Name:match("Seed") then
+                            local baseName = tool.Name:match("^(.-) Seed")
+                            if baseName then
+                                tool.Parent = character
+                                task.wait(0.1)
+                                while autoPlantAllRunning and character:FindFirstChild(tool.Name) do
+                                    local pos = root.Position - Vector3.new(0, 3, 0)
+                                    local args = {
+                                        Vector3.new(pos.X, pos.Y, pos.Z),
+                                        baseName
+                                    }
+                                    PlantRemote:FireServer(unpack(args))
+                                    task.wait()
+                                end
+                            end
+                        end
+                    end
+                end
+
+                task.wait(0.1)
+            end
+        end)
+    end
+end)
+
+
+local Tab = Window:AddTab({ Title = "Misc", Icon = "boxes" })
+
+local button = Tab:AddButton({
+	Title = "Sell Inventory",
+	Callback = function()
+		local player = game.Players.LocalPlayer
+		local char = player.Character or player.CharacterAdded:Wait()
+		local hrp = char:FindFirstChild("HumanoidRootPart")
+		local sellEvent = game:GetService("ReplicatedStorage"):WaitForChild("GameEvents"):WaitForChild("Sell_Inventory")
+		
+		if not hrp then return end
+		
+		local originalPos = hrp.Position
+		local stevenHead = workspace:WaitForChild("NPCS"):WaitForChild("Steven"):WaitForChild("Head")
+		
+		hrp.CFrame = stevenHead.CFrame
+		task.wait(0.3)
+
+		sellEvent:FireServer()
+		task.wait(0.2)
+
+		hrp.CFrame = CFrame.new(originalPos)
+	end
+})
+
+local button = Tab:AddButton({
+	Title = "Sell Holding",
+	Callback = function()
+		local player = game.Players.LocalPlayer
+		local char = player.Character or player.CharacterAdded:Wait()
+		local hrp = char:FindFirstChild("HumanoidRootPart")
+		local sellEvent = game:GetService("ReplicatedStorage"):WaitForChild("GameEvents"):WaitForChild("Sell_Item")
+		
+		if not hrp then return end
+		
+		local originalPos = hrp.Position
+		local stevenHead = workspace:WaitForChild("NPCS"):WaitForChild("Steven"):WaitForChild("Head")
+		
+		hrp.CFrame = stevenHead.CFrame
+		task.wait(0.2)
+
+		sellEvent:FireServer()
+		task.wait(0.1)
+
+		hrp.CFrame = CFrame.new(originalPos)
+	end
+})
+
+Tab:AddButton({
+	Title = "View / Hide Gear Shop",
+	Callback = function()
+		local gui = game.Players.LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("Gear_Shop")
+		if gui then
+			gui.Enabled = not gui.Enabled
+		end
+	end
+})
+
+Tab:AddButton({
+	Title = "View / Hide Seed Shop",
+	Callback = function()
+		local gui = game.Players.LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("Seed_Shop")
+		if gui then
+			gui.Enabled = not gui.Enabled
+		end
+	end
+})
+
+Tab:AddButton({
+	Title = "View / Hide Daily Quests",
+	Callback = function()
+		local gui = game.Players.LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("DailyQuests_UI")
+		if gui then
+			gui.Enabled = not gui.Enabled
+		end
+	end
+})
+
+
+local Tab = Window:AddTab({ Title = "Auto", Icon = "battery" })
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = game.Players.LocalPlayer
+local BuyRemote = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("BuySeedStock")
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local BuyRemote = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("BuySeedStock")
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local BuyRemote = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("BuySeedStock")
+
+local running = false
+local seedList = {
+    "Bamboo", "Coconut", "Mushroom", "Mango", "Grape", "Pepper",
+    "Dragon Fruit", "Apple", "Cactus", "Watermelon", "Pumpkin",
+    "Daffodil", "Corn", "Carrot", "Strawberry", "Blueberry"
+}
+
+Tab:AddToggle("AutobuyAllToggle", {
+    Title = "Autobuy All Stock",
+    Default = false
+}):OnChanged(function(state)
+    running = state
+
+    if running then
+        task.spawn(function()
+            while running do
+                for _, item in ipairs(seedList) do
+                    BuyRemote:FireServer(item)
+                end
+                task.wait(1)
+            end
+        end)
+    end
+end)
+
+local maxPromptRange = 15
+local autoInteract = false
+
+Tab:AddSlider("PromptRangeSlider", {
+	Title = "Collect Range",
+	Default = 15,
+	Min = 10,
+	Max = 30,
+	Increment = 1,
+	ValueName = "studs",
+	Rounding = 0
+}):OnChanged(function(value)
+	maxPromptRange = value
+end)
+
+
+Tab:AddToggle("AutoPromptToggle", {
+	Title = "Auto Collect All",
+	Default = false
+}):OnChanged(function(state)
+	autoInteract = state
+
+	if autoInteract then
+		task.spawn(function()
+			while autoInteract do
+				local player = game.Players.LocalPlayer
+				local char = player.Character or player.CharacterAdded:Wait()
+				local root = char and char:FindFirstChild("HumanoidRootPart")
+
+				if root then
+					for _, prompt in ipairs(workspace:GetDescendants()) do
+						if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+							local part = prompt.Parent:IsA("BasePart") and prompt.Parent
+								or (prompt.Parent:IsA("Model") and prompt.Parent:FindFirstChildWhichIsA("BasePart"))
+
+							if part and (part.Position - root.Position).Magnitude <= maxPromptRange then
+								fireproximityprompt(prompt)
+							end
+						end
+					end
+				end
+
+				task.wait(0.1)
+			end
+		end)
+	end
+end)
+
+local running = false
+
+Tab:AddToggle("Autofarm", {
+	Title = "Autofarm",
+	Default = false
+}):OnChanged(function(enabled)
+	running = enabled
+
+	local player = game.Players.LocalPlayer
+	local farmsFolder = workspace:WaitForChild("Farm")
+	local sellRemote = game:GetService("ReplicatedStorage"):WaitForChild("GameEvents"):WaitForChild("Sell_Inventory")
+
+	if running then
+		task.spawn(function()
+			local lastSell = tick()
+
+			while running do
+				local char = player.Character or player.CharacterAdded:Wait()
+				local root = char and char:FindFirstChild("HumanoidRootPart")
+				if not root then task.wait(0.2) continue end
+
+				for _, farm in ipairs(farmsFolder:GetChildren()) do
+					if not running then return end
+
+					if farm:IsA("Folder") then
+						local ownerValue = farm:FindFirstChild("Important")
+							and farm.Important:FindFirstChild("Data")
+							and farm.Important.Data:FindFirstChild("Owner")
+
+						if ownerValue and (ownerValue.Value == player or ownerValue.Value == player.Name) then
+							local plants = farm.Important:FindFirstChild("Plants_Physical")
+							if plants then
+								for _, plant in ipairs(plants:GetChildren()) do
+									if not running then return end
+
+									if plant:IsA("Model") then
+										local part = plant.PrimaryPart or plant:FindFirstChildWhichIsA("BasePart")
+										if part then
+											root.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+
+											for _, prompt in ipairs(workspace:GetDescendants()) do
+												if not running then return end
+
+												if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+													local promptPart = prompt.Parent:IsA("BasePart")
+														and prompt.Parent
+														or (prompt.Parent:IsA("Model")
+														and prompt.Parent:FindFirstChildWhichIsA("BasePart"))
+
+													if promptPart and (promptPart.Position - root.Position).Magnitude <= 15 then
+														fireproximityprompt(prompt)
+													end
+												end
+											end
+
+											task.wait(0.5)
+										end
+									end
+								end
+							end
+						end
+					end
+				end
+
+				if tick() - lastSell >= 5 then
+					lastSell = tick()
+					local originalPos = root.Position
+					local steven = workspace:FindFirstChild("NPCS")
+						and workspace.NPCS:FindFirstChild("Steven")
+						and workspace.NPCS.Steven:FindFirstChild("Head")
+
+					if steven then
+						root.CFrame = steven.CFrame
+						task.wait(0.2)
+						sellRemote:FireServer()
+						task.wait(0.2)
+						root.CFrame = CFrame.new(originalPos)
+					end
+				end
+
+				task.wait(0.1)
+			end
+		end)
+	end
+end)
